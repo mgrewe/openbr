@@ -16,6 +16,7 @@
 
 #include <openbr/plugins/openbr_internal.h>
 #include <openbr/core/opencvutils.h>
+#include <iostream>
 
 namespace br
 {
@@ -30,18 +31,33 @@ class PointsToMatrixTransform : public UntrainableTransform
     Q_OBJECT
 
     Q_PROPERTY(QString inputVariable READ get_inputVariable WRITE set_inputVariable RESET reset_inputVariable STORED false)
+    Q_PROPERTY(int pos READ get_pos WRITE set_pos RESET reset_pos STORED false)
+	Q_PROPERTY(int length READ get_length WRITE set_length RESET reset_length STORED false)
     BR_PROPERTY(QString, inputVariable, QString())
+    BR_PROPERTY(int , pos, 0)
+	BR_PROPERTY(int , length, -1)
 
     void project(const Template &src, Template &dst) const
     {
+    	QList<QPointF> res;
+
         dst = src;
 
         if (inputVariable.isEmpty()) {
-            dst.m() = OpenCVUtils::pointsToMatrix(dst.file.points());
+			res = dst.file.points();
         } else {
             if (src.file.contains(inputVariable))
-                dst.m() = OpenCVUtils::pointsToMatrix(dst.file.get<QList<QPointF> >(inputVariable));
+                res = dst.file.get<QList<QPointF> >(inputVariable);
         }
+
+        if (length > 0 && length+pos > res.length())
+        	qFatal("wrong pos or length given.");
+        else
+        	res = res.mid(pos,length);
+
+        dst.m() = OpenCVUtils::pointsToMatrix(res);
+
+
     }
 };
 
