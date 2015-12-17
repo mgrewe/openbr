@@ -24,6 +24,7 @@
 #include "qtutils.h"
 
 #include <QTemporaryFile>
+#include <algorithm>
 
 using namespace cv;
 using namespace std;
@@ -349,6 +350,39 @@ QList<Point2f> OpenCVUtils::toPoints(const QList<QPointF> &qPoints)
         cvPoints.append(toPoint(qPoint));
     return cvPoints;
 }
+
+QList<Point2f> OpenCVUtils::toPoints(const Mat &qPoints)
+{
+	QList<Point2f::value_type> vector = matrixToVector<Point2f::value_type>(qPoints);
+	if (vector.size()%2)
+		qFatal("matrix element count must be multiple of 2");
+    QList<Point2f> cvPoints; cvPoints.reserve(vector.size()/2);
+
+    QList<Point2f::value_type>::const_iterator it = vector.begin();
+    while (it != vector.end())
+        cvPoints.append(Point2f(*it++,*it++));
+    return cvPoints;
+}
+
+cv::Point2f OpenCVUtils::getMinimumElements(const QList<Point2f> &qPoints){
+	cv::Point2f result;
+	foreach(const Point2f &qPoint, qPoints){
+		result.x = std::min<cv::Point2f::value_type>(qPoint.x, result.x);
+		result.y = std::min<cv::Point2f::value_type>(qPoint.y, result.y);
+	}
+	return result;
+}
+
+cv::Point2f OpenCVUtils::getMaximumElements(const QList<Point2f> &qPoints){
+	cv::Point2f result;
+	foreach(const Point2f &qPoint, qPoints){
+		result.x = std::max<cv::Point2f::value_type>(qPoint.x, result.x);
+		result.y = std::max<cv::Point2f::value_type>(qPoint.y, result.y);
+	}
+	return result;
+}
+
+
 
 QList<QPointF> OpenCVUtils::fromPoints(const QList<Point2f> &cvPoints)
 {
