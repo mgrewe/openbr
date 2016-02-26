@@ -19,6 +19,7 @@
 #include <openbr/plugins/openbr_internal.h>
 #include <openbr/core/opencvutils.h>
 #include <openbr/core/eigenutils.h>
+#include <iostream>
 
 using namespace cv;
 
@@ -35,7 +36,11 @@ class ProcrustesTransform : public MetadataTransform
     Q_OBJECT
 
     Q_PROPERTY(bool warp READ get_warp WRITE set_warp RESET reset_warp STORED false)
+    Q_PROPERTY(int pos READ get_pos WRITE set_pos RESET reset_pos STORED false)
+	Q_PROPERTY(int length READ get_length WRITE set_length RESET reset_length STORED false)
     BR_PROPERTY(bool, warp, true)
+	BR_PROPERTY(int, pos ,0)
+	BR_PROPERTY(int, length ,-1)
 
     Eigen::MatrixXf meanShape;
 
@@ -46,6 +51,13 @@ class ProcrustesTransform : public MetadataTransform
         // Normalize all sets of points
         foreach (br::Template datum, data) {
             QList<QPointF> points = datum.file.points();
+
+            if (length > 0 && length+pos > points.length())
+            	qFatal("wrong pos or length given.");
+            else
+            	points = points.mid(pos,length);
+
+
             QList<QRectF> rects = datum.file.rects();
 
             if (points.empty() || rects.empty()) continue;
@@ -92,6 +104,13 @@ class ProcrustesTransform : public MetadataTransform
     void projectMetadata(const File &src, File &dst) const
     {
         QList<QPointF> points = src.points();
+
+        if (length > 0 && length+pos > points.length())
+        	qFatal("wrong pos or length given.");
+        else
+        	points = points.mid(pos,length);
+
+
         QList<QRectF> rects = src.rects();
 
         if (points.empty() || rects.empty()) {
@@ -119,6 +138,15 @@ class ProcrustesTransform : public MetadataTransform
 
         Eigen::JacobiSVD<Eigen::MatrixXf> svd(srcMat.transpose()*meanShape, Eigen::ComputeThinU | Eigen::ComputeThinV);
         Eigen::MatrixXf R = svd.matrixU()*svd.matrixV().transpose();
+
+        points = src.points();
+        rects = src.rects();
+        srcMat.resize(points.size(), 2);
+        for (int i = 0; i < points.size(); i++) {
+            points[i] /= norm;
+            srcMat(i,0) = points[i].x();
+            srcMat(i,1) = points[i].y();
+        }
 
         dst = src;
 
